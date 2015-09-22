@@ -1,0 +1,106 @@
+#!/usr/bin/env
+import csv, time
+#import str
+
+class UCIException(Exception):
+    pass
+
+def parse_imei(filename):
+    data = {}
+    with open(filename) as csvfile:
+        rdr = csv.DictReader(csvfile)
+        for row in rdr:
+            lbl = _clean(row['Label'])
+            if lbl in data:
+                raise UCIException
+            data[lbl] = row['IMEI']
+    return data
+
+def parse_unitlist (filename):
+    with open(filename) as csvfile:
+        data = {}
+        rdr = csv.DictReader(csvfile)
+        for row in rdr:
+            lbl = _clean(row['unitid'])
+            if lbl in data:
+                raise UCIException
+            data[lbl] = {
+                'unitid': lbl,
+                'Delorme': _clean(row['Delorme']),
+                'Branch': row['Branch']
+            }
+        _chk_duplabel(data)
+        return data
+
+def _clean(label):
+    lbl = label.upper()
+    lbl = str.replace(lbl, " ", "")
+    if lbl in ['N/A', 'NA']:
+        return None
+    return lbl
+
+def _chk_duplabel(unitdata):
+    # checks for duplicate delorem lables
+    labels = []
+    for k, v in unitdata.items():
+        if v['Delorme']:
+            if v['Delorme'] in labels:
+                print("Found duplicate label for %s" % v['Delorme'])
+                raise UCIException
+            labels.append(v['Delorme'])
+
+
+def _chk_dupimei(imeidata):
+    # checks for duplicate imeis
+    imeis = []
+    for k, v in imeidata.items():
+        if v['IMEI'] in imeis:
+            print("Found duplicate imei %s" % v)
+            raise UCIException
+        labels.append(v['IMEI'])
+
+def xrange(x):
+    return iter(range(x))
+
+# def _chunks(l, n):
+#     """Yield successive n-sized chunks from l."""
+#     return zip(*[iter(l)]*n)
+def _chunks(MyList, n):
+    # chunks arrays
+    chunk = []
+    chunks = []
+    for x in range(0, len(MyList), n):
+        chunk = MyList[x:x+n]
+        chunks.append(chunk)
+    return chunks
+
+def join_unitlist():
+    #writes a joined unit list to edit in inet
+    devices = parse_imei("imei.csv")
+    units = parse_unitlist("unitlist.csv")
+    fn = "units-%s" % time.strftime("%Y%m%d-%H%M%S")
+    with open('%s.csv' % fn, 'w') as csvfile:
+        headers = ['unitid', 'Delorme', 'IMEI', 'Branch']
+        wrtr = csv.DictWriter(csvfile, fieldnames=headers)
+        for id, unit in units.items():
+            if unit['Delorme']:
+                unit['IMEI'] = devices.get(unit['Delorme'], None)
+                wrtr.writerow(unit)
+
+def join_activationlist():
+    units = parse_unitlist("unitlist.csv")
+    active_units = [k for k, v in units.items() if v['Branch']]
+    unit_chunks = _chunks(active_units, 5)
+    fn = "activate-%s" % time.strftime("%Y%m%d-%H%M%S")
+    with open('%s.txt' % fn, 'w') as f:
+        for chunk in unit_chunks:
+            f.write(" ".join(chunk).lower() + " lo\n")
+
+if __name__ == '__main__':
+    join_unitlist()
+    join_activationlist()
+    # for k,v in parse_imei("imei.csv").items():
+    #     print(k, '-', v)
+    # for k,v in parse_unitlist("unitlist.csv").items():
+    #     print(k, '-', v)
+    # #print("%r" % parse_unitlist("unitlist.csv"))
