@@ -65,7 +65,7 @@ def xrange(x):
 # def _chunks(l, n):
 #     """Yield successive n-sized chunks from l."""
 #     return zip(*[iter(l)]*n)
-def _chunks(MyList, n):
+def chunks(MyList, n):
     # chunks arrays
     chunk = []
     chunks = []
@@ -78,29 +78,40 @@ def join_unitlist():
     #writes a joined unit list to edit in inet
     devices = parse_imei("imei.csv")
     units = parse_unitlist("unitlist.csv")
+    for id, unit in units.items():
+        if unit['Delorme']:
+            unit['IMEI'] = devices.get(unit['Delorme'], None)
+    return units
+
+def write_joinedunitlist(units):
+    #writes the a joined unit list to csv
     fn = "units-%s" % time.strftime("%Y%m%d-%H%M%S")
     with open('%s.csv' % fn, 'w') as csvfile:
         headers = ['unitid', 'Delorme', 'IMEI', 'Branch']
         wrtr = csv.DictWriter(csvfile, fieldnames=headers)
         for id, unit in units.items():
             if unit['Delorme']:
-                unit['IMEI'] = devices.get(unit['Delorme'], None)
                 wrtr.writerow(unit)
 
 def join_activationlist():
     units = parse_unitlist("unitlist.csv")
     active_units = [k for k, v in units.items() if v['Branch']]
-    unit_chunks = _chunks(active_units, 5)
+    unit_chunks = chunks(active_units, 5)
     fn = "activate-%s" % time.strftime("%Y%m%d-%H%M%S")
     with open('%s.txt' % fn, 'w') as f:
         for chunk in unit_chunks:
             f.write(" ".join(chunk).lower() + " lo\n")
 
+def join_deactivationlist():
+    units = parse_unitlist("unitlist.csv")
+    active_units = [k for k, v in units.items() if v['Branch']]
+    unit_chunks = chunks(active_units, 5)
+    fn = "deactivate-%s" % time.strftime("%Y%m%d-%H%M%S")
+    with open('%s.txt' % fn, 'w') as f:
+        for chunk in unit_chunks:
+            f.write(" ".join(chunk).lower() + " loff\n")
+
 if __name__ == '__main__':
-    join_unitlist()
+    write_joinedunitlist(join_unitlist())
     join_activationlist()
-    # for k,v in parse_imei("imei.csv").items():
-    #     print(k, '-', v)
-    # for k,v in parse_unitlist("unitlist.csv").items():
-    #     print(k, '-', v)
-    # #print("%r" % parse_unitlist("unitlist.csv"))
+    join_deactivationlist()
