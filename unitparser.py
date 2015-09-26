@@ -95,7 +95,7 @@ def write_joinedunitlist(units):
 
 def join_activationlist():
     units = parse_unitlist("unitlist.csv")
-    active_units = [k for k, v in units.items() if v['Branch']]
+    active_units = [k for k, v in units.items() if v['Branch'] or v['Delorme']]
     unit_chunks = chunks(active_units, 5)
     fn = "activate-%s" % time.strftime("%Y%m%d-%H%M%S")
     with open('%s.txt' % fn, 'w') as f:
@@ -104,7 +104,7 @@ def join_activationlist():
 
 def join_deactivationlist():
     units = parse_unitlist("unitlist.csv")
-    active_units = [k for k, v in units.items() if v['Branch']]
+    active_units = [k for k, v in units.items() if v['Branch'] or v['Delorme']]
     unit_chunks = chunks(active_units, 5)
     fn = "deactivate-%s" % time.strftime("%Y%m%d-%H%M%S")
     with open('%s.txt' % fn, 'w') as f:
